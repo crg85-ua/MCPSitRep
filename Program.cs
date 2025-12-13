@@ -10,11 +10,16 @@ builder.Logging.AddConsole(o => o.LogToStandardErrorThreshold = LogLevel.Trace);
 // Add HttpClient for temperature sensor API calls
 builder.Services.AddHttpClient();
 
+// Add AI Service for real Llama integration using OllamaSharp
+builder.Services.AddSingleton<IAIService, LlamaAIService>();
+
 // Add the MCP services: the transport to use (stdio) and the tools to register.
 builder.Services
     .AddMcpServer()
     .WithStdioServerTransport()
     .WithTools<RandomNumberTools>()
-    .WithTools<TemperatureSensorTools>();
+    .WithTools<TemperatureSensorTools>()
+    .WithTools<OccupancyAnalysisTools>()
+    .WithTools<ParkingAnalysisTools>();
 
 await builder.Build().RunAsync();

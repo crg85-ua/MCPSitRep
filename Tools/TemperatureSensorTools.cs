@@ -1,37 +1,46 @@
 using System.ComponentModel;
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using ModelContextProtocol.Server;
 
 /// <summary>
-/// MCP tools for temperature sensor data collection and AI interpretation.
-/// These tools can call temperature sensor API endpoints and interpret the data using AI.
+/// Herramientas MCP para recolección de datos de sensores de temperatura e interpretación con IA.
+/// Estas herramientas pueden llamar endpoints de APIs de sensores de temperatura e interpretar los datos usando IA.
 /// </summary>
 internal class TemperatureSensorTools
 {
     private readonly HttpClient _httpClient;
+    private readonly IAIService _aiService;
 
-    public TemperatureSensorTools(HttpClient httpClient)
+    // URL base predefinida para la API
+    private const string BaseApiUrl = "/GetRawData";
+
+    public TemperatureSensorTools(HttpClient httpClient, IAIService aiService)
     {
         _httpClient = httpClient;
+        _aiService = aiService;
     }
 
     [McpServerTool]
-    [Description("Calls a temperature sensor API endpoint and uses AI (Llama) to interpret the temperature data, providing insights and recommendations.")]
+    [Description("Llama al endpoint predefinido de API de pronóstico meteorológico usando el sensorId y usa IA (Llama) para interpretar los datos completos del clima, devolviendo un análisis estructurado en formato JSON.")]
     public async Task<string> GetTemperatureDataWithAIInterpretation(
-        [Description("The URL of the temperature sensor API endpoint")] string apiUrl,
-        [Description("Optional API key for authentication")] string? apiKey = null,
-        [Description("Include safety recommendations in the interpretation")] bool includeSafetyRecommendations = true,
-        [Description("Include trend analysis if available")] bool includeTrendAnalysis = true)
+        [Description("ID del sensor de temperatura a consultar")] string sensorId,
+        [Description("Clave API opcional para autenticación")] string? apiKey = null,
+        [Description("Incluir recomendaciones de seguridad en la interpretación")] bool includeSafetyRecommendations = true,
+        [Description("Incluir análisis de tendencias si está disponible")] bool includeTrendAnalysis = true)
     {
         try
         {
-            //// Configure HTTP client headers if API key is provided
-            //if (!string.IsNullOrEmpty(apiKey))
-            //{
-            //    _httpClient.DefaultRequestHeaders.Clear();
-            //    _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
-            //}
+            // Construir la URL predefinida con el sensorId
+            var apiUrl = $"{BaseApiUrl}/GetTemperatureDataBySensor/{sensorId}";
+
+            // Configure HTTP client headers if API key is provided
+            if (!string.IsNullOrEmpty(apiKey))
+            {
+                _httpClient.DefaultRequestHeaders.Clear();
+                _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
+            }
 
             // Call the temperature sensor API
             var response = await _httpClient.GetAsync(apiUrl);
@@ -50,227 +59,139 @@ internal class TemperatureSensorTools
                 // If parsing fails, we'll work with raw data
             }
 
-            // Generate AI interpretation using Llama-style analysis
-            var interpretation = GenerateAIInterpretation(temperatureData, sensorData, includeSafetyRecommendations, includeTrendAnalysis);
+            // Generate AI interpretation using REAL Llama model
+            var interpretation = await _aiService.AnalyzeTemperatureDataAsync(temperatureData, sensorData, includeSafetyRecommendations, includeTrendAnalysis);
 
-            return $"""
-                ## Temperature Sensor Data Analysis
+            // Return structured JSON response
+            var result = new
+            {
+                success = true,
+                timestamp = DateTime.UtcNow,
+                sensorId = sensorId,
+                apiEndpoint = apiUrl,
+                rawData = temperatureData,
+                parsedData = sensorData,
+                aiAnalysis = interpretation
+            };
 
-                ### Raw Sensor Data:
-                {temperatureData}
-
-                ### AI Interpretation (Llama Analysis):
-                {interpretation}
-                
-                ---
-                *Analysis generated using AI interpretation of temperature sensor data*
-                """;
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions 
+            { 
+                WriteIndented = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
         }
         catch (HttpRequestException ex)
         {
-            return $"Error calling temperature sensor API: {ex.Message}";
+            var errorResult = new
+            {
+                success = false,
+                timestamp = DateTime.UtcNow,
+                sensorId = sensorId,
+                error = "API_CONNECTION_ERROR",
+                message = $"Error al llamar a la API del sensor de temperatura: {ex.Message}",
+                details = new { endpoint = $"{BaseApiUrl}/GetTemperatureDataBySensor/{sensorId}", statusCode = ex.Data["StatusCode"]?.ToString() }
+            };
+
+            return JsonSerializer.Serialize(errorResult, new JsonSerializerOptions 
+            { 
+                WriteIndented = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
         }
         catch (Exception ex)
         {
-            return $"Unexpected error: {ex.Message}";
+            var errorResult = new
+            {
+                success = false,
+                timestamp = DateTime.UtcNow,
+                sensorId = sensorId,
+                error = "UNEXPECTED_ERROR",
+                message = $"Error inesperado: {ex.Message}",
+                details = new { exception = ex.GetType().Name }
+            };
+
+            return JsonSerializer.Serialize(errorResult, new JsonSerializerOptions 
+            { 
+                WriteIndented = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
         }
     }
 
     [McpServerTool]
-    [Description("Simulates calling a temperature sensor API with mock data for demonstration purposes.")]
-    public string GetMockTemperatureDataWithAIInterpretation(
-        [Description("Simulated temperature value in Celsius")] double temperatureCelsius = 22.5,
-        [Description("Simulated humidity percentage")] double humidity = 45.0,
-        [Description("Sensor location description")] string location = "Office Room",
-        [Description("Include safety recommendations in the interpretation")] bool includeSafetyRecommendations = true)
+    [Description("Simula una llamada a una API de pronóstico meteorológico con datos de prueba completos y usa IA real (Llama) para el análisis, devolviendo resultados estructurados en JSON.")]
+    public async Task<string> GetMockTemperatureDataWithAIInterpretation(
+        [Description("Valor simulado de temperatura en Celsius")] double temperatureCelsius = 22.5,
+        [Description("Humedad relativa simulada (0.0-1.0)")] double relativeHumidity = 0.45,
+        [Description("Velocidad del viento simulada en m/s")] double windSpeed = 3.2,
+        [Description("Tipo de clima simulado")] string weatherType = "soleado",
+        [Description("Precipitación simulada en mm")] double precipitation = 0.0,
+        [Description("Incluir recomendaciones de seguridad en la interpretación")] bool includeSafetyRecommendations = true)
     {
-        var mockData = new TemperatureSensorData
+        try
         {
-            Temperature = temperatureCelsius,
-            Humidity = humidity,
-            Location = location,
-            Timestamp = DateTime.UtcNow,
-            Unit = "Celsius"
-        };
+            var mockData = new TemperatureSensorData
+            {
+                Id = "urn:ngsi-ld:WeatherForecast:demo-001",
+                Type = "WeatherForecast",
+                DateIssued = DateTime.UtcNow,
+                ValidFrom = DateTime.UtcNow,
+                ValidTo = DateTime.UtcNow.AddHours(24),
+                DateRetrieved = DateTime.UtcNow,
+                Temperature = temperatureCelsius,
+                RelativeHumidity = relativeHumidity,
+                WindSpeed = windSpeed,
+                WeatherType = weatherType,
+                Precipitation = precipitation,
+                Location = new GeoJsonGeometry
+                {
+                    Type = "Point",
+                    Coordinates = new double[] { -0.5, 38.5 } // Ejemplo: Valencia, España
+                },
+                AreaServed = "Valencia, España",
+                DataProvider = "MCPSitRep Mock Data Provider"
+            };
 
-        var mockJson = System.Text.Json.JsonSerializer.Serialize(mockData, new System.Text.Json.JsonSerializerOptions 
-        { 
-            WriteIndented = true 
-        });
+            var mockJson = JsonSerializer.Serialize(mockData, new JsonSerializerOptions 
+            { 
+                WriteIndented = true 
+            });
 
-        var interpretation = GenerateAIInterpretation(mockJson, mockData, includeSafetyRecommendations, true);
+            // Use REAL AI service for interpretation
+            var interpretation = await _aiService.AnalyzeTemperatureDataAsync(mockJson, mockData, includeSafetyRecommendations, true);
 
-        return $"""
-            ## Mock Temperature Sensor Data Analysis
+            // Return structured JSON response
+            var result = new
+            {
+                success = true,
+                timestamp = DateTime.UtcNow,
+                dataType = "MOCK_DATA",
+                simulatedData = mockData,
+                aiAnalysis = interpretation
+            };
 
-            ### Simulated Sensor Data:
-            {mockJson}
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions 
+            { 
+                WriteIndented = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+        }
+        catch (Exception ex)
+        {
+            var errorResult = new
+            {
+                success = false,
+                timestamp = DateTime.UtcNow,
+                error = "MOCK_DATA_ERROR",
+                message = $"Error procesando datos simulados: {ex.Message}",
+                details = new { exception = ex.GetType().Name }
+            };
 
-            ### AI Interpretation (Llama Analysis):
-            {interpretation}
-            
-            ---
-            *This is a demonstration using simulated sensor data*
-            """;
+            return JsonSerializer.Serialize(errorResult, new JsonSerializerOptions 
+            { 
+                WriteIndented = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+        }
     }
-
-    private string GenerateAIInterpretation(string rawData, TemperatureSensorData? parsedData, bool includeSafetyRecommendations, bool includeTrendAnalysis)
-    {
-        var analysis = new List<string>();
-
-        // Temperature Analysis
-        if (parsedData != null)
-        {
-            analysis.Add("### Temperature Analysis:");
-            
-            var tempC = parsedData.Temperature;
-            var tempF = tempC * 9/5 + 32;
-            
-            analysis.Add($"- **Current Temperature**: {tempC:F1}°C ({tempF:F1}°F)");
-            
-            // Comfort zone analysis
-            if (tempC >= 20 && tempC <= 25)
-            {
-                analysis.Add($"- **Comfort Status**: Optimal comfort zone for most people");
-            }
-            else if (tempC >= 18 && tempC <= 27)
-            {
-                analysis.Add($"- **Comfort Status**: Acceptable but may require adjustment");
-            }
-            else if (tempC < 18)
-            {
-                analysis.Add($"- **Comfort Status**: Too cold - heating recommended");
-            }
-            else
-            {
-                analysis.Add($"- **Comfort Status**: Too warm - cooling recommended");
-            }
-
-            // Humidity analysis
-            if (parsedData.Humidity.HasValue)
-            {
-                var humidity = parsedData.Humidity.Value;
-                analysis.Add("\n### Humidity Analysis:");
-                analysis.Add($"- **Current Humidity**: {humidity:F1}%");
-                
-                if (humidity >= 40 && humidity <= 60)
-                {
-                    analysis.Add($"- **Humidity Status**: Ideal humidity range");
-                }
-                else if (humidity < 40)
-                {
-                    analysis.Add($"- **Humidity Status**: Too dry - consider humidification");
-                }
-                else
-                {
-                    analysis.Add($"- **Humidity Status**: Too humid - may cause discomfort");
-                }
-            }
-
-            // Location context
-            if (!string.IsNullOrEmpty(parsedData.Location))
-            {
-                analysis.Add($"\n### Location Context: {parsedData.Location}");
-                analysis.Add(GetLocationSpecificAdvice(parsedData.Location, tempC));
-            }
-        }
-
-        // Safety recommendations
-        if (includeSafetyRecommendations)
-        {
-            analysis.Add("\n### Safety & Health Recommendations:");
-            
-            if (parsedData != null)
-            {
-                var temp = parsedData.Temperature;
-                if (temp < 16)
-                {
-                    analysis.Add("- **Cold Warning**: Temperature below recommended minimum. Risk of hypothermia in prolonged exposure.");
-                    analysis.Add("- **Action**: Increase heating immediately, ensure proper insulation.");
-                }
-                else if (temp > 30)
-                {
-                    analysis.Add("- **Heat Warning**: High temperature detected. Risk of heat stress and dehydration.");
-                    analysis.Add("- **Action**: Improve ventilation or cooling, ensure adequate hydration.");
-                }
-                else
-                {
-                    analysis.Add("- Temperature within safe operating range.");
-                }
-            }
-        }
-
-        // Trend analysis (simulated for demonstration)
-        if (includeTrendAnalysis)
-        {
-            analysis.Add("\n### Trend Analysis:");
-            analysis.Add("- **Note**: Real trend analysis would require historical data from the sensor API");
-            analysis.Add("- **Recommendation**: Consider implementing data logging for pattern recognition");
-            analysis.Add("- **AI Insight**: Monitor temperature variations throughout the day for optimization opportunities");
-        }
-
-        // Energy efficiency suggestions
-        analysis.Add("\n### Energy Efficiency Suggestions:");
-        if (parsedData != null)
-        {
-            var temp = parsedData.Temperature;
-            if (temp >= 20 && temp <= 25)
-            {
-                analysis.Add("- Current temperature is energy-efficient");
-            }
-            else
-            {
-                analysis.Add($"- Adjusting to 22°C could optimize energy consumption");
-            }
-        }
-
-        return string.Join("\n", analysis);
-    }
-
-    private string GetLocationSpecificAdvice(string location, double temperature)
-    {
-        return location.ToLowerInvariant() switch
-        {
-            var loc when loc.Contains("office") => 
-                $"Office environments work best at 21-24°C. Current: {temperature:F1}°C - " + 
-                (temperature >= 21 && temperature <= 24 ? "Perfect for productivity!" : "Consider adjustment for optimal work performance."),
-            
-            var loc when loc.Contains("bedroom") => 
-                $"Bedrooms should be cooler (16-19°C) for better sleep. Current: {temperature:F1}°C - " + 
-                (temperature >= 16 && temperature <= 19 ? "Ideal for restful sleep." : "May affect sleep quality."),
-            
-            var loc when loc.Contains("kitchen") => 
-                $"Kitchens tend to be warmer due to appliances. Current: {temperature:F1}°C - " + 
-                (temperature <= 26 ? "Within acceptable range." : "Consider increased ventilation."),
-                
-            _ => $"General comfort range is 20-25°C. Current: {temperature:F1}°C"
-        };
-    }
-}
-
-/// <summary>
-/// Data structure for parsing temperature sensor API responses
-/// </summary>
-internal class TemperatureSensorData
-{
-    [JsonPropertyName("temperature")]
-    public double Temperature { get; set; }
-
-    [JsonPropertyName("humidity")]
-    public double? Humidity { get; set; }
-
-    [JsonPropertyName("location")]
-    public string Location { get; set; } = string.Empty;
-
-    [JsonPropertyName("timestamp")]
-    public DateTime Timestamp { get; set; }
-
-    [JsonPropertyName("unit")]
-    public string Unit { get; set; } = "Celsius";
-
-    [JsonPropertyName("sensor_id")]
-    public string? SensorId { get; set; }
-
-    [JsonPropertyName("status")]
-    public string? Status { get; set; }
 }
