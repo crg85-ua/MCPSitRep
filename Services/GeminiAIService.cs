@@ -1,8 +1,12 @@
-using Microsoft.Extensions.Configuration;
-using OllamaSharp;
-using OllamaSharp.Models;
-using System.Text;
+ï»¿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using Google.GenAI.Types;
+using Google.GenAI;
+using Occupancy;
+using Parking;
+using Weather;
+
 
 /// <summary>
 /// Servicio para realizar llamadas a modelos de IA como Llama
@@ -10,244 +14,184 @@ using System.Text.Json;
 public interface IAIService
 {
     /// <summary>
-    /// Analiza datos meteorológicos utilizando el modelo de IA Llama y devuelve un análisis estructurado
+    /// Analiza datos meteorolï¿½gicos utilizando el modelo de IA Llama y devuelve un anï¿½lisis estructurado
     /// </summary>
     /// <param name="temperatureData">Datos brutos del sensor en formato JSON string</param>
     /// <param name="parsedData">Datos del sensor parseados a objeto TemperatureSensorData (puede ser null)</param>
-    /// <param name="includeSafetyRecommendations">Indica si incluir recomendaciones de seguridad en el análisis</param>
-    /// <param name="includeTrendAnalysis">Indica si incluir análisis de tendencias en el resultado</param>
-    /// <returns>Objeto WeatherAnalysisResult con el análisis completo o null si hay error</returns>
+    /// <param name="includeSafetyRecommendations">Indica si incluir recomendaciones de seguridad en el anï¿½lisis</param>
+    /// <param name="includeTrendAnalysis">Indica si incluir anï¿½lisis de tendencias en el resultado</param>
+    /// <returns>Objeto WeatherAnalysisResult con el anï¿½lisis completo o null si hay error</returns>
     Task<WeatherAnalysisResult?> AnalyzeTemperatureDataAsync(string temperatureData, TemperatureSensorData? parsedData, bool includeSafetyRecommendations, bool includeTrendAnalysis);
 
     /// <summary>
-    /// Analiza datos de aforo/ocupación utilizando el modelo de IA Llama y devuelve un análisis estructurado
+    /// Analiza datos de aforo/ocupaciï¿½n utilizando el modelo de IA Llama y devuelve un anï¿½lisis estructurado
     /// </summary>
     /// <param name="occupancyData">Datos brutos del sensor de aforo en formato JSON string</param>
     /// <param name="parsedData">Datos del sensor parseados a objeto OccupancySensorData (puede ser null)</param>
-    /// <param name="includeFlowAnalysis">Indica si incluir análisis de flujo de personas en el resultado</param>
     /// <param name="includeAlerts">Indica si incluir alertas y recomendaciones operativas</param>
-    /// <returns>Objeto OccupancyAnalysisResult con el análisis completo o null si hay error</returns>
-    Task<OccupancyAnalysisResult?> AnalyzeOccupancyDataAsync(string occupancyData, OccupancySensorData? parsedData, bool includeFlowAnalysis, bool includeAlerts);
+    /// <returns>Objeto OccupancyAnalysisResult con el anï¿½lisis completo o null si hay error</returns>
+    Task<OccupancyAnalysisResult?> AnalyzeOccupancyDataAsync(string occupancyData, OccupancySensorData? parsedData, bool includeAlerts);
 
     /// <summary>
-    /// Analiza datos de sensores de aparcamiento utilizando el modelo de IA Llama y devuelve un análisis estructurado
+    /// Analiza datos de sensores de aparcamiento utilizando el modelo de IA Llama y devuelve un anï¿½lisis estructurado
     /// </summary>
     /// <param name="parkingData">Datos brutos de sensores de aparcamiento en formato JSON string</param>
-    /// <param name="parsedData">Datos parseados de múltiples sensores (puede ser null)</param>
-    /// <param name="includeViolationAnalysis">Indica si incluir análisis de infracciones de tiempo</param>
-    /// <param name="includeSensorHealth">Indica si incluir análisis de estado de sensores</param>
-    /// <returns>Objeto ParkingAnalysisResult con el análisis completo o null si hay error</returns>
-    Task<ParkingAnalysisResult?> AnalyzeParkingDataAsync(string parkingData, ParkingSensorCollection? parsedData, bool includeViolationAnalysis, bool includeSensorHealth);
+    /// <param name="parsedData">Datos parseados de mï¿½ltiples sensores (puede ser null)</param>
+    /// <returns>Objeto ParkingAnalysisResult con el anï¿½lisis completo o null si hay error</returns>
+    Task<ParkingAnalysisResult?> AnalyzeParkingDataAsync(string parkingData, ParkingSensorCollection? parsedData);
 }
 
 /// <summary>
-/// Implementación del servicio de IA que se conecta a Llama a través de OllamaSharp
+/// Implementaciï¿½n del servicio de IA que se conecta a Gemini
 /// </summary>
-public class LlamaAIService : IAIService
+public class GeminiAIService : IAIService
 {
-    private readonly OllamaApiClient _ollamaClient;
+    private readonly Client _client;
     private readonly string _modelName;
+    private readonly ILogger<GeminiAIService> _logger;
+
 
     /// <summary>
-    /// Constructor que inicializa el cliente de Ollama con la configuración proporcionada
+    /// Constructor que inicializa el cliente de Gemini con la configuraciï¿½n proporcionada
     /// </summary>
-    /// <param name="configuration">Configuración de la aplicación que contiene endpoint y modelo de IA</param>
-    public LlamaAIService(IConfiguration configuration)
+    /// <param name="configuration">Configuraciï¿½n de la aplicaciï¿½n que contiene endpoint y modelo de IA</param>
+    /// <param name="logger">Logger para registrar errores y eventos del servicio</param>
+    public GeminiAIService(IConfiguration configuration, ILogger<GeminiAIService> logger)
     {
-        // Obtener configuración del endpoint y modelo desde appsettings.json
-        var apiEndpoint = configuration.GetValue<string>("LlamaAI:ApiEndpoint") ?? "http://localhost:11434";
-        _modelName = configuration.GetValue<string>("LlamaAI:ModelName") ?? "llama3";
-        
-        // Crear el cliente de Ollama con el endpoint configurado
-        _ollamaClient = new OllamaApiClient(new Uri(apiEndpoint))
-        {
-            SelectedModel = _modelName
-        };
+        _logger = logger;
+
+        // 1. Obtener la API Key desde la configuraciÃ³n
+        var apiKey = configuration.GetValue<string>("GeminiAI:ApiKey")
+                     ?? throw new ArgumentNullException("GeminiAI:ApiKey no encontrada.");
+
+        _modelName =configuration.GetValue<string>("GeminiAI:ModelName") ?? "models/gemini-2.5-flash";
+
+        // 2. Inicializar el cliente unificado de Google GenAI
+        _client = new Client(apiKey: apiKey);
     }
 
     /// <summary>
-    /// Método principal que analiza datos meteorológicos usando el modelo Llama
-    /// Maneja la comunicación con Ollama, procesa la respuesta JSON y proporciona fallbacks en caso de error
+    /// Mï¿½todo principal que analiza datos meteorolï¿½gicos usando el modelo Llama
+    /// Maneja la comunicaciï¿½n con Gemini, procesa la respuesta JSON y proporciona fallbacks en caso de error
     /// </summary>
-    /// <param name="temperatureData">Datos brutos del sensor meteorológico en formato JSON</param>
+    /// <param name="temperatureData">Datos brutos del sensor meteorolï¿½gico en formato JSON</param>
     /// <param name="parsedData">Objeto TemperatureSensorData parseado (opcional)</param>
     /// <param name="includeSafetyRecommendations">Flag para incluir recomendaciones de seguridad</param>
-    /// <param name="includeTrendAnalysis">Flag para incluir análisis de tendencias</param>
-    /// <returns>WeatherAnalysisResult con análisis completo o análisis básico en caso de error</returns>
+    /// <param name="includeTrendAnalysis">Flag para incluir anï¿½lisis de tendencias</param>
+    /// <returns>WeatherAnalysisResult con anï¿½lisis completo o anï¿½lisis bï¿½sico en caso de error</returns>
     public async Task<WeatherAnalysisResult?> AnalyzeTemperatureDataAsync(string temperatureData, TemperatureSensorData? parsedData, bool includeSafetyRecommendations, bool includeTrendAnalysis)
     {
         try
         {
-            // Crear el prompt específico para el análisis meteorológico
             var prompt = CreateWeatherAnalysisPrompt(temperatureData, parsedData, includeSafetyRecommendations, includeTrendAnalysis);
-            
-            // Configurar la solicitud para el modelo Llama via OllamaSharp
-            var request = new GenerateRequest
-            {
-                Model = _modelName,
-                Prompt = prompt,
-                Stream = false // Desactivar streaming para obtener respuesta completa
-            };
 
-            // Realizar la llamada asíncrona a Ollama y recopilar la respuesta
-            var responseBuilder = new StringBuilder();
-            
-            await foreach (var responseStream in _ollamaClient.GenerateAsync(request))
+            // 3. La llamada se hace vÃ­a client.Models.GenerateContentAsync
+            // Usamos GenerationConfig para forzar JSON
+            var response = await _client.Models.GenerateContentAsync(_modelName, prompt, new()
             {
-                // Acumular fragmentos de respuesta
-                if (responseStream?.Response != null)
-                {
-                    responseBuilder.Append(responseStream.Response);
-                }
-                
-                // Terminar cuando se reciba la señal de finalización
-                if (responseStream?.Done == true)
-                {
-                    break;
-                }
-            }
+                ResponseMimeType = "application/json"
+            });
 
-            var finalResponse = responseBuilder.ToString();
-            
+            // 4. Se accede al texto mediante la propiedad .Text del objeto de respuesta
+            var finalResponse = response?.Candidates?[0]?.Content?.Parts?[0]?.Text;
+
             if (!string.IsNullOrEmpty(finalResponse))
             {
-                // Intentar parsear la respuesta JSON del modelo Llama
                 return ParseWeatherAnalysisResponse(finalResponse);
             }
-            else
-            {
-                return null;
-            }
+            return null;
         }
         catch (HttpRequestException ex)
         {
-            // Error de conexión con Ollama - devolver análisis básico como fallback
-            return CreateWeatherFallbackAnalysis(parsedData, $"Error de conexión con Ollama: {ex.Message}");
+            // Error de conexiï¿½n con Gemini - devolver anï¿½lisis bï¿½sico como fallback
+            return CreateWeatherFallbackAnalysis(parsedData, $"Error de conexion con Gemini: {ex.Message}");
         }
         catch (Exception ex)
         {
-            // Error general - devolver análisis básico como fallback
-            return CreateWeatherFallbackAnalysis(parsedData, $"Error al conectar con el modelo Llama: {ex.Message}");
+            // Error general - devolver anï¿½lisis bï¿½sico como fallback
+            return CreateWeatherFallbackAnalysis(parsedData, $"Error al conectar con el modelo de Gemini: {ex.Message} {ex.StackTrace}");
         }
     }
 
     /// <summary>
-    /// Analiza datos de aforo/ocupación usando el modelo Llama
-    /// Maneja la comunicación con Ollama, procesa la respuesta JSON y proporciona fallbacks en caso de error
+    /// Analiza datos de aforo/ocupaciï¿½n usando el modelo Llama
+    /// Maneja la comunicaciï¿½n con Ollama, procesa la respuesta JSON y proporciona fallbacks en caso de error
     /// </summary>
     /// <param name="occupancyData">Datos brutos del sensor de aforo en formato JSON</param>
     /// <param name="parsedData">Objeto OccupancySensorData parseado (opcional)</param>
-    /// <param name="includeFlowAnalysis">Flag para incluir análisis de flujo de personas</param>
+    /// <param name="includeFlowAnalysis">Flag para incluir anï¿½lisis de flujo de personas</param>
     /// <param name="includeAlerts">Flag para incluir alertas y recomendaciones operativas</param>
-    /// <returns>OccupancyAnalysisResult con análisis completo o análisis básico en caso de error</returns>
-    public async Task<OccupancyAnalysisResult?> AnalyzeOccupancyDataAsync(string occupancyData, OccupancySensorData? parsedData, bool includeFlowAnalysis, bool includeAlerts)
+    /// <returns>OccupancyAnalysisResult con anï¿½lisis completo o anï¿½lisis bï¿½sico en caso de error</returns>
+    public async Task<OccupancyAnalysisResult?> AnalyzeOccupancyDataAsync(string occupancyData, OccupancySensorData? parsedData, bool includeAlerts)
     {
         try
         {
-            // Crear el prompt específico para el análisis de aforo
-            var prompt = CreateOccupancyAnalysisPrompt(occupancyData, parsedData, includeFlowAnalysis, includeAlerts);
-            
-            // Configurar y realizar la solicitud a Ollama
-            var request = new GenerateRequest
-            {
-                Model = _modelName,
-                Prompt = prompt,
-                Stream = false
-            };
+            var prompt = CreateOccupancyAnalysisPrompt(occupancyData, parsedData, includeAlerts);
 
-            var responseBuilder = new StringBuilder();
-            
-            await foreach (var responseStream in _ollamaClient.GenerateAsync(request))
+            var response = await _client.Models.GenerateContentAsync(_modelName, prompt, new()
             {
-                if (responseStream?.Response != null)
-                {
-                    responseBuilder.Append(responseStream.Response);
-                }
-                
-                if (responseStream?.Done == true)
-                {
-                    break;
-                }
-            }
+                ResponseMimeType = "application/json"
+            });
 
-            var finalResponse = responseBuilder.ToString();
-            
+               // 4. Se accede al texto mediante la propiedad .Text del objeto de respuesta
+            var finalResponse = response?.Candidates?[0]?.Content?.Parts?[0]?.Text;
+
             if (!string.IsNullOrEmpty(finalResponse))
             {
                 return ParseOccupancyAnalysisResponse(finalResponse);
             }
-            else
-            {
-                return null;
-            }
+            return null;
         }
         catch (HttpRequestException ex)
         {
-            return CreateFallbackOccupancyAnalysis(parsedData, $"Error de conexión con Ollama: {ex.Message}");
+            // Error de conexiï¿½n con Gemini - devolver anï¿½lisis bï¿½sico como fallback
+            return CreateFallbackOccupancyAnalysis(parsedData, $"Error de conexion con Gemini: {ex.Message}");
         }
         catch (Exception ex)
         {
-            return CreateFallbackOccupancyAnalysis(parsedData, $"Error al conectar con el modelo Llama: {ex.Message}");
+            // Error general - devolver anï¿½lisis bï¿½sico como fallback
+            return CreateFallbackOccupancyAnalysis(parsedData, $"Error al conectar con el modelo de Gemini: {ex.Message} {ex.StackTrace}");
         }
     }
 
     /// <summary>
     /// Analiza datos de sensores de aparcamiento usando el modelo Llama
-    /// Procesa múltiples sensores y proporciona análisis integral de disponibilidad y gestión
+    /// Procesa mï¿½ltiples sensores y proporciona anï¿½lisis integral de disponibilidad y gestiï¿½n
     /// </summary>
     /// <param name="parkingData">Datos brutos de sensores de aparcamiento en formato JSON</param>
-    /// <param name="parsedData">Colección de datos de sensores parseados (opcional)</param>
-    /// <param name="includeViolationAnalysis">Flag para incluir análisis de infracciones</param>
-    /// <param name="includeSensorHealth">Flag para incluir análisis de estado de sensores</param>
-    /// <returns>ParkingAnalysisResult con análisis completo o análisis básico en caso de error</returns>
-    public async Task<ParkingAnalysisResult?> AnalyzeParkingDataAsync(string parkingData, ParkingSensorCollection? parsedData, bool includeViolationAnalysis, bool includeSensorHealth)
+    /// <param name="parsedData">Colecciï¿½n de datos de sensores parseados (opcional)</param>
+    /// <returns>ParkingAnalysisResult con anï¿½lisis completo o anï¿½lisis bï¿½sico en caso de error</returns>
+    public async Task<ParkingAnalysisResult?> AnalyzeParkingDataAsync(string parkingData, ParkingSensorCollection? parsedData)
     {
         try
         {
-            // Crear el prompt específico para el análisis de aparcamiento
-            var prompt = CreateParkingAnalysisPrompt(parkingData, parsedData, includeViolationAnalysis, includeSensorHealth);
-            
-            // Configurar y realizar la solicitud a Ollama
-            var request = new GenerateRequest
-            {
-                Model = _modelName,
-                Prompt = prompt,
-                Stream = false
-            };
+            var prompt = CreateParkingAnalysisPrompt(parkingData, parsedData);
 
-            var responseBuilder = new StringBuilder();
-            
-            await foreach (var responseStream in _ollamaClient.GenerateAsync(request))
+            var response = await _client.Models.GenerateContentAsync(_modelName, prompt, new()
             {
-                if (responseStream?.Response != null)
-                {
-                    responseBuilder.Append(responseStream.Response);
-                }
-                
-                if (responseStream?.Done == true)
-                {
-                    break;
-                }
-            }
+                ResponseMimeType = "application/json"
+            });
 
-            var finalResponse = responseBuilder.ToString();
-            
+            // 4. Se accede al texto mediante la propiedad .Text del objeto de respuesta
+            var finalResponse = response?.Candidates?[0]?.Content?.Parts?[0]?.Text;
+
             if (!string.IsNullOrEmpty(finalResponse))
             {
                 return ParseParkingAnalysisResponse(finalResponse);
             }
-            else
-            {
-                return null;
-            }
+            return null;
         }
         catch (HttpRequestException ex)
         {
-            return CreateFallbackParkingAnalysis(parsedData, $"Error de conexión con Ollama: {ex.Message}");
+            var errorMsg = $"Error de conexion con Gemini: {ex.Message}";
+            _logger.LogError(ex, "AnalyzeParkingDataAsync - HttpRequestException: {Message}", ex.Message);
+            return CreateFallbackParkingAnalysis(parsedData, errorMsg);
         }
         catch (Exception ex)
         {
-            return CreateFallbackParkingAnalysis(parsedData, $"Error al conectar con el modelo Llama: {ex.Message}");
+            var errorMsg = $"Error al conectar con el modelo de Gemini: {ex.GetType().Name} - {ex.Message}";
+            _logger.LogError(ex, "AnalyzeParkingDataAsync - Exception: {Type} {Message}", ex.GetType().Name, ex.Message);
+            return CreateFallbackParkingAnalysis(parsedData, errorMsg);
         }
     }
 
@@ -313,12 +257,12 @@ public class LlamaAIService : IAIService
     {
         var startIndex = response.IndexOf('{');
         var lastIndex = response.LastIndexOf('}');
-        
+
         if (startIndex >= 0 && lastIndex > startIndex)
         {
             return response.Substring(startIndex, lastIndex - startIndex + 1);
         }
-        
+
         return response;
     }
 
@@ -334,7 +278,7 @@ public class LlamaAIService : IAIService
                 CurrentTemperature = parsedData.Temperature,
                 TemperatureFahrenheit = parsedData.Temperature.HasValue ? (parsedData.Temperature * 9 / 5 + 32) : null,
                 ComfortLevel = GetBasicComfortLevel(parsedData.Temperature),
-                ComfortDescription = "Análisis básico - IA no disponible",
+                ComfortDescription = "Analysis result - IA no disponible",
                 ComfortScore = GetBasicComfortScore(parsedData.Temperature)
             };
 
@@ -343,7 +287,7 @@ public class LlamaAIService : IAIService
                 RelativeHumidity = parsedData.RelativeHumidity,
                 HumidityPercentage = parsedData.Humidity,
                 HumidityStatus = GetBasicHumidityStatus(parsedData.Humidity),
-                HumidityDescription = "Análisis básico - IA no disponible",
+                HumidityDescription = "Analysis result - IA no disponible",
                 HumidityScore = GetBasicHumidityScore(parsedData.Humidity)
             };
 
@@ -353,7 +297,7 @@ public class LlamaAIService : IAIService
                 WeatherType = parsedData.WeatherType,
                 Precipitation = parsedData.Precipitation,
                 OverallWeatherStatus = "fair",
-                WeatherDescription = $"Análisis básico - {errorMessage}",
+                WeatherDescription = $"Analysis result - {errorMessage}",
                 WeatherScore = 5
             };
         }
@@ -373,7 +317,7 @@ public class LlamaAIService : IAIService
                 MaxCapacity = parsedData.MaxCapacity,
                 OccupancyPercentage = parsedData.OccupancyPercentage,
                 OccupancyLevel = parsedData.OccupancyLevel.ToLowerInvariant(),
-                StatusDescription = "Análisis básico - IA no disponible",
+                StatusDescription = "Anï¿½lisis bï¿½sico - IA no disponible",
                 EfficiencyScore = GetBasicOccupancyScore(parsedData.OccupancyPercentage)
             };
 
@@ -383,7 +327,7 @@ public class LlamaAIService : IAIService
                 {
                     AvailableSpaces = Math.Max(0, parsedData.MaxCapacity.Value - parsedData.CurrentOccupancy.Value),
                     AccessRecommendation = GetBasicAccessRecommendation(parsedData.OccupancyPercentage),
-                    RecommendationDescription = $"Análisis básico - {errorMessage}"
+                    RecommendationDescription = $"Anï¿½lisis bï¿½sico - {errorMessage}"
                 };
             }
         }
@@ -393,14 +337,19 @@ public class LlamaAIService : IAIService
 
     private ParkingAnalysisResult CreateFallbackParkingAnalysis(ParkingSensorCollection? parsedData, string errorMessage)
     {
-        var fallback = new ParkingAnalysisResult();
+        var fallback = new ParkingAnalysisResult
+        {
+            OccupancyAnalysis = new ParkingOccupancyAnalysis
+            {
+                StatusDescription = $"Anï¿½lisis bï¿½sico - IA no disponible: {errorMessage}"
+            }
+        };
 
         if (parsedData?.ParkingSpots != null)
         {
             var totalSpots = parsedData.ParkingSpots.Count;
-            var occupiedSpots = parsedData.ParkingSpots.Count(s => s.IsOccupied);
-            var availableSpots = parsedData.ParkingSpots.Count(s => s.IsAvailable);
-            var outOfOrderSpots = parsedData.ParkingSpots.Count(s => s.IsOutOfOrder);
+            var occupiedSpots = parsedData.ParkingSpots.Count(s => s.Status == "occupied");
+            var availableSpots = parsedData.ParkingSpots.Count(s => s.Status == "free");
             var occupancyPercentage = totalSpots > 0 ? (double)occupiedSpots / totalSpots * 100 : 0;
 
             fallback.OccupancyAnalysis = new ParkingOccupancyAnalysis
@@ -408,10 +357,9 @@ public class LlamaAIService : IAIService
                 TotalSpots = totalSpots,
                 OccupiedSpots = occupiedSpots,
                 AvailableSpots = availableSpots,
-                OutOfOrderSpots = outOfOrderSpots,
                 OccupancyPercentage = occupancyPercentage,
                 AvailabilityLevel = GetBasicAvailabilityLevel(occupancyPercentage),
-                StatusDescription = "Análisis básico - IA no disponible"
+                StatusDescription = $"Anï¿½lisis bï¿½sico - IA no disponible: {errorMessage}"
             };
         }
 
@@ -456,7 +404,7 @@ public class LlamaAIService : IAIService
     private int GetBasicOccupancyScore(double? occupancyPercentage)
     {
         if (!occupancyPercentage.HasValue) return 5;
-        
+
         return occupancyPercentage.Value switch
         {
             >= 70 and <= 85 => 10,
@@ -471,11 +419,11 @@ public class LlamaAIService : IAIService
     private string GetBasicAccessRecommendation(double? occupancyPercentage)
     {
         if (!occupancyPercentage.HasValue) return "allow";
-        
+
         return occupancyPercentage.Value switch
         {
             < 80 => "allow",
-            >= 80 and < 95 => "restrict", 
+            >= 80 and < 95 => "restrict",
             _ => "deny"
         };
     }
@@ -508,15 +456,15 @@ public class LlamaAIService : IAIService
         ""monitoringRecommendations"": [""string1"", ""string2""]
       }," : "";
 
-        var temperatureInfo = parsedData?.Temperature.HasValue == true ? $"- Temperatura: {parsedData.Temperature:F1}°C" : "";
+        var temperatureInfo = parsedData?.Temperature.HasValue == true ? $"- Temperatura: {parsedData.Temperature:F1}ï¿½C" : "";
         var humidityInfo = parsedData?.Humidity.HasValue == true ? $"- Humedad: {parsedData.Humidity:F1}%" : "";
         var windInfo = parsedData?.WindSpeed.HasValue == true ? $"- Velocidad del viento: {parsedData.WindSpeed:F1} m/s" : "";
         var weatherInfo = parsedData?.WeatherType != null ? $"- Tipo de clima: {parsedData.WeatherType}" : "";
-        var precipitationInfo = parsedData?.Precipitation.HasValue == true ? $"- Precipitación: {parsedData.Precipitation:F1} mm" : "";
-        var locationInfo = parsedData?.Location?.Coordinates != null && parsedData.Location.Coordinates.Length >= 2 
+        var precipitationInfo = parsedData?.Precipitation.HasValue == true ? $"- Precipitaciï¿½n: {parsedData.Precipitation:F1} mm" : "";
+        var locationInfo = parsedData?.Location?.Coordinates != null && parsedData.Location.Coordinates.Length >= 2
             ? $"- Coordenadas: {parsedData.Location.Coordinates[1]:F4}, {parsedData.Location.Coordinates[0]:F4}" : "";
 
-        var prompt = $@"Analiza los siguientes datos de pronóstico meteorológico y responde ÚNICAMENTE con un objeto JSON estructurado.
+        var prompt = $@"Analiza los siguientes datos de pronï¿½stico meteorolï¿½gico y responde ï¿½NICAMENTE con un objeto JSON estructurado.
 
 DATOS DEL SENSOR: {rawData}
 
@@ -528,42 +476,41 @@ DATOS: {temperatureInfo} {humidityInfo} {windInfo} {weatherInfo} {precipitationI
         return prompt;
     }
 
-    private string CreateOccupancyAnalysisPrompt(string rawData, OccupancySensorData? parsedData, bool includeFlowAnalysis, bool includeAlerts)
+    private string CreateOccupancyAnalysisPrompt(string rawData, OccupancySensorData? parsedData, bool includeAlerts)
     {
-        var flowSection = includeFlowAnalysis ? @"""trafficPatterns"":{""entrances"":number,""exits"":number,""netFlow"":number,""flowTrend"":""increasing|decreasing|stable"",""shortTermPrediction"":""string""}," : "";
         var alertsSection = includeAlerts ? @"""alerts"":{""alertLevel"":""none|low|medium|high|critical"",""activeAlerts"":[""string1""],""warnings"":[""string1""],""timeToNextAlert"":""string""}," : "";
 
-        var occupancyInfo = parsedData?.CurrentOccupancy.HasValue == true ? $"Ocupación:{parsedData.CurrentOccupancy}" : "";
+        var occupancyInfo = parsedData?.CurrentOccupancy.HasValue == true ? $"Ocupaciï¿½n:{parsedData.CurrentOccupancy}" : "";
         var capacityInfo = parsedData?.MaxCapacity.HasValue == true ? $"Capacidad:{parsedData.MaxCapacity}" : "";
 
         var prompt = $@"Analiza datos de aforo y responde SOLO JSON:
 
 DATOS: {rawData}
 
-ESQUEMA:{{""occupancyAnalysis"":{{""currentOccupancy"":number,""maxCapacity"":number,""occupancyPercentage"":number,""occupancyLevel"":""low|moderate|high|critical|full"",""statusDescription"":""string"",""efficiencyScore"":number}},""capacityAnalysis"":{{""availableSpaces"":number,""accessRecommendation"":""allow|restrict|deny"",""recommendationDescription"":""string""}},{flowSection}{alertsSection}""operationalRecommendations"":{{""immediateActions"":[""string1""],""queueManagement"":[""string1""],""userCommunications"":[""string1""]}}}}
+ESQUEMA:{{""occupancyAnalysis"":{{""currentOccupancy"":number,""maxCapacity"":number,""occupancyPercentage"":number,""occupancyLevel"":""low|moderate|high|critical|full"",""statusDescription"":""string"",""efficiencyScore"":number}},""capacityAnalysis"":{{""availableSpaces"":number,""accessRecommendation"":""allow|restrict|deny"",""recommendationDescription"":""string""}},{alertsSection}""operationalRecommendations"":{{""immediateActions"":[""string1""],""queueManagement"":[""string1""],""userCommunications"":[""string1""]}}}}
 
 INFO: {occupancyInfo} {capacityInfo}";
-        
+
         return prompt;
     }
 
-    private string CreateParkingAnalysisPrompt(string rawData, ParkingSensorCollection? parsedData, bool includeViolationAnalysis, bool includeSensorHealth)
+    private string CreateParkingAnalysisPrompt(string rawData, ParkingSensorCollection? parsedData)
     {
-        var violationSection = includeViolationAnalysis ? @"""violationAnalysis"":{""potentialViolations"":number,""warningSpots"":number,""violationSpots"":[""string1""]}," : "";
-        var healthSection = includeSensorHealth ? @"""sensorHealth"":{""totalSensors"":number,""activeSensors"":number,""faultySensors"":number,""systemHealthPercentage"":number}," : "";
-
         var totalSpots = parsedData?.ParkingSpots?.Count ?? 0;
-        var occupiedSpots = parsedData?.ParkingSpots?.Count(s => s.IsOccupied) ?? 0;
+        var parkingSpots = parsedData?.ParkingSpots?
+                .Select(s => new { id = s.Id, status = s.Status, is_pmr = s.Is_pmr == true ? "PMR" : "Standard" })
+                .ToList();
+        var occupiedSpots = parsedData?.ParkingSpots?.Count(s => s.Status == "occupied") ?? 0;
         var summaryInfo = totalSpots > 0 ? $"Total:{totalSpots} Ocupadas:{occupiedSpots}" : "";
 
-        var prompt = $@"Analiza datos de aparcamiento y responde SOLO JSON:
+        var prompt = $@"Analiza datos de aparcamiento y responde SOLO CON JSON:
 
 DATOS: {rawData}
 
-ESQUEMA:{{""occupancyAnalysis"":{{""totalSpots"":number,""occupiedSpots"":number,""availableSpots"":number,""outOfOrderSpots"":number,""occupancyPercentage"":number,""availabilityLevel"":""high|medium|low|critical"",""statusDescription"":""string""}},{violationSection}{healthSection}""operationalRecommendations"":{{""immediateActions"":[""string1""],""userGuidance"":[""string1""]}},""performanceMetrics"":{{""utilizationEfficiency"":number,""overallPerformanceScore"":number}}}}
+ESQUEMA:{{""occupancyAnalysis"":{{""totalSpots"":number,""occupiedSpots"":number,""availableSpots"":number,""occupancyPercentage"":number,""availabilityLevel"":""high|medium|low|critical"",""statusDescription"":""string"",""parkingSpots"": [{{""id"":""string"",""status"":""occupied|free"",""type"":""PMR|Standard""}}]}}}}
 
 INFO: {summaryInfo}";
-        
+
         return prompt;
     }
 }

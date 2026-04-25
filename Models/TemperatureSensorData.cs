@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 
 /// <summary>
-/// Modelo de datos para pronóstico meteorológico según estándar FIWARE dataModel.Weather WeatherForecast
+/// Modelo de datos para pronï¿½stico meteorolï¿½gico segï¿½n estï¿½ndar FIWARE dataModel.Weather WeatherForecast
 /// </summary>
 public class TemperatureSensorData
 {
@@ -129,7 +129,7 @@ public class TemperatureSensorData
     /// The geo-location of this forecast expressed by a GeoJSON geometry
     /// </summary>
     [JsonPropertyName("location")]
-    public GeoJsonGeometry? Location { get; set; }
+    public Location? Location { get; set; }
 
     /// <summary>
     /// The address of this forecast
@@ -182,67 +182,32 @@ public class TemperatureSensorData
     public double? Humidity => RelativeHumidity;
 
     /// <summary>
-    /// Timestamp para compatibilidad con código existente
+    /// Timestamp para compatibilidad con cï¿½digo existente
     /// </summary>
     [JsonIgnore]
     public DateTime Timestamp => DateRetrieved ?? DateTime.UtcNow;
 
     /// <summary>
-    /// Unidad de temperatura (siempre Celsius según FIWARE)
+    /// Unidad de temperatura (siempre Celsius segï¿½n FIWARE)
     /// </summary>
     [JsonIgnore]
     public string Unit => "Celsius";
 
-    /// <summary>
-    /// Descripción textual de la ubicación basada en coordenadas o dirección
-    /// </summary>
-    [JsonIgnore]
-    public string LocationDescription
-    {
-        get
-        {
-            if (Address != null)
-            {
-                var parts = new List<string>();
-                if (!string.IsNullOrEmpty(Address.StreetAddress)) parts.Add(Address.StreetAddress);
-                if (!string.IsNullOrEmpty(Address.AddressLocality)) parts.Add(Address.AddressLocality);
-                if (!string.IsNullOrEmpty(Address.AddressCountry)) parts.Add(Address.AddressCountry);
-                if (parts.Any()) return string.Join(", ", parts);
-            }
-
-            if (Location?.Type == "Point" && Location.Coordinates?.Length >= 2)
-            {
-                return $"Lat: {Location.Coordinates[1]:F4}, Lon: {Location.Coordinates[0]:F4}";
-            }
-
-            return AreaServed ?? "Ubicación desconocida";
-        }
-    }
 
     /// <summary>
-    /// Fecha y hora para compatibilidad con código existente
+    /// Fecha y hora para compatibilidad con cï¿½digo existente
     /// </summary>
     [JsonIgnore]
     public DateTime DateTime => ValidFrom ?? DateRetrieved ?? DateTime.UtcNow;
 }
 
-/// <summary>
-/// GeoJSON geometry according to FIWARE standard
-/// </summary>
-public class GeoJsonGeometry
-{
     /// <summary>
-    /// GeoJSON type (Point, LineString, Polygon, etc.)
-    /// </summary>
-    [JsonPropertyName("type")]
-    public string Type { get; set; } = "Point";
-
-    /// <summary>
-    /// GeoJSON coordinates array [longitude, latitude] for Point type
-    /// </summary>
-    [JsonPropertyName("coordinates")]
-    public double[] Coordinates { get; set; } = new double[2];
-}
+    /// UbicaciÃ³n geogrÃ¡fica segÃºn el estÃ¡ndar FIWARE
+    /// </summary
+    public class Location
+    {
+        public double[] Coordinates { get; set; } = new double[2]; // [longitud, latitud]
+    }
 
 /// <summary>
 /// Address according to FIWARE civic address standard
@@ -286,8 +251,3 @@ public class Address
     public string? PostOfficeBoxNumber { get; set; }
 }
 
-// Alias para compatibilidad con código existente
-public class Location : GeoJsonGeometry
-{
-    // Mantener compatibilidad con código existente
-}

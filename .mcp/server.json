@@ -1,21 +1,12 @@
 {
   "$schema": "https://modelcontextprotocol.io/schemas/draft/2025-07-09/server.json",
-  "description": "<your description here>",
-  "name": "io.github.<your GitHub username here>/<your repo name>",
-  "packages": [
-    {
-      "registry_name": "nuget",
-      "name": "<your package ID here>",
-      "version": "0.1.0-beta",
-      "package_arguments": [],
-      "environment_variables": []
-    }
-  ],
-  "repository": {
-    "url": "https://github.com/<your GitHub username here>/<your repo name>",
-    "source": "github"
-  },
+  "name": "MCPSitRep",
+  "description": "Servidor MCP para análisis de datos de sensores: clima, aforo y aparcamiento.",
   "version_detail": {
-    "version": "0.1.0-beta"
+    "version": "0.1.0"
+  },
+  "transport": {
+    "type": "http",
+    "url": "http://localhost:5010/mcp"
   }
 }
