@@ -29,7 +29,7 @@ builder.Services
 
 var app = builder.Build();
 
-app.MapMcp();
+app.MapMcp("/mcp");
 
 // ===== WEATHER ANALYSIS ENDPOINT =====
 app.MapPost("/api/analysis/weather", async (
