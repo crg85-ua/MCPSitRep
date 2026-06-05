@@ -8,7 +8,8 @@ internal class WeatherAnalysisTools : AnalysisToolBase
         : base(httpClient, aiService) { }
 
     [McpServerTool]
-    [Description("Llama al endpoint de API meteorológica usando el IdEspacio y usa IA (Gemini) para interpretar los datos del clima del área, devolviendo un análisis estructurado en JSON.")]
+    [Description("Llama al endpoint de API meteorológica usando el IdEspacio y usa IA (Gemini) para interpretar los datos del clima del área, " +
+        "devolviendo un análisis estructurado en JSON.")]
     public async Task<string> GetWeatherAnalysisWithAI(
         [Description("ID del espacio meteorológico a consultar")] string idEspacio,
         [Description("Incluir recomendaciones de seguridad")] bool includeSafetyRecommendations = true,

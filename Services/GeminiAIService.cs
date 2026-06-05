@@ -64,7 +64,7 @@ public class GeminiAIService : IAIService
         var apiKey = configuration.GetValue<string>("GeminiAI:ApiKey")
                      ?? throw new ArgumentNullException("GeminiAI:ApiKey no encontrada.");
 
-        _modelName =configuration.GetValue<string>("GeminiAI:ModelName") ?? "models/gemini-2.5-flash";
+        _modelName = configuration.GetValue<string>("GeminiAI:ModelName") ?? "models/gemini-2.5-flash";
 
         // 2. Inicializar el cliente unificado de Google GenAI
         _client = new Client(apiKey: apiKey);
@@ -133,7 +133,7 @@ public class GeminiAIService : IAIService
                 ResponseMimeType = "application/json"
             });
 
-               // 4. Se accede al texto mediante la propiedad .Text del objeto de respuesta
+            // Se accede al texto mediante la propiedad .Text del objeto de respuesta
             var finalResponse = response?.Candidates?[0]?.Content?.Parts?[0]?.Text;
 
             if (!string.IsNullOrEmpty(finalResponse))
@@ -464,14 +464,37 @@ public class GeminiAIService : IAIService
         var locationInfo = parsedData?.Location?.Coordinates != null && parsedData.Location.Coordinates.Length >= 2
             ? $"- Coordenadas: {parsedData.Location.Coordinates[1]:F4}, {parsedData.Location.Coordinates[0]:F4}" : "";
 
-        var prompt = $@"Analiza los siguientes datos de pron�stico meteorol�gico y responde �NICAMENTE con un objeto JSON estructurado.
+        var prompt = $@"Analiza los siguientes datos de pronóstico meteorológico y responde ÚNICAMENTE con un objeto JSON estructurado.
 
-DATOS DEL SENSOR: {rawData}
+            DATOS DEL SENSOR: {rawData}
 
-ESQUEMA JSON REQUERIDO:
-{{""temperatureAnalysis"":{{""currentTemperature"":number,""temperatureFahrenheit"":number,""comfortLevel"":""optimal|acceptable|cold|hot"",""comfortDescription"":""string"",""comfortScore"":number}},""humidityAnalysis"":{{""relativeHumidity"":number,""humidityPercentage"":number,""humidityStatus"":""ideal|dry|humid"",""humidityDescription"":""string"",""humidityScore"":number}},""weatherConditions"":{{""windSpeed"":number,""windCategory"":""calm|light|moderate|strong"",""weatherType"":""string"",""precipitation"":number,""overallWeatherStatus"":""excellent|good|fair|poor"",""weatherDescription"":""string"",""weatherScore"":number}},{safetySection}{trendSection}""activityRecommendations"":{{""outdoorActivities"":[""string1""],""indoorActivities"":[""string1""],""activitiesToAvoid"":[""string1""],""recommendedClothing"":[""string1""],""outdoorSuitabilityScore"":number}}}}
+            ESQUEMA JSON REQUERIDO:
+            {{""temperatureAnalysis"":
+                    {{""currentTemperature"":number,
+                    ""temperatureFahrenheit"":number,
+                    ""comfortLevel"":""optimal|acceptable|cold|hot"",
+                    ""comfortDescription"":""string"",
+                    ""comfortScore"":number}},
+             ""humidityAnalysis"":{{
+                    ""relativeHumidity"":number,
+                    ""humidityPercentage"":number,
+                    ""humidityStatus"":""ideal|dry|humid"",
+                    ""humidityDescription"":""string"",
+                    ""humidityScore"":number}},
+             ""weatherConditions"":{{""windSpeed"":number,
+                    ""windCategory"":""calm|light|moderate|strong"",
+                    ""weatherType"":""string"",""precipitation"":number,
+                    ""overallWeatherStatus"":""excellent|good|fair|poor"",
+                    ""weatherDescription"":""string"",""weatherScore"":number}},
+                {safetySection}{trendSection}
+                ""activityRecommendations"": {{
+                    ""outdoorActivities"":[""string1""],
+                    ""indoorActivities"":[""string1""],
+                    ""activitiesToAvoid"":[""string1""],
+                    ""recommendedClothing"":[""string1""],
+                    ""outdoorSuitabilityScore"":number}}}}
 
-DATOS: {temperatureInfo} {humidityInfo} {windInfo} {weatherInfo} {precipitationInfo} {locationInfo}";
+            DATOS: {temperatureInfo} {humidityInfo} {windInfo} {weatherInfo} {precipitationInfo} {locationInfo}";
 
         return prompt;
     }
@@ -485,11 +508,11 @@ DATOS: {temperatureInfo} {humidityInfo} {windInfo} {weatherInfo} {precipitationI
 
         var prompt = $@"Analiza datos de aforo y responde SOLO JSON:
 
-DATOS: {rawData}
+        DATOS: {rawData}
 
-ESQUEMA:{{""occupancyAnalysis"":{{""currentOccupancy"":number,""maxCapacity"":number,""occupancyPercentage"":number,""occupancyLevel"":""low|moderate|high|critical|full"",""statusDescription"":""string"",""efficiencyScore"":number}},""capacityAnalysis"":{{""availableSpaces"":number,""accessRecommendation"":""allow|restrict|deny"",""recommendationDescription"":""string""}},{alertsSection}""operationalRecommendations"":{{""immediateActions"":[""string1""],""queueManagement"":[""string1""],""userCommunications"":[""string1""]}}}}
+        ESQUEMA:{{""occupancyAnalysis"":{{""currentOccupancy"":number,""maxCapacity"":number,""occupancyPercentage"":number,""occupancyLevel"":""low|moderate|high|critical|full"",""statusDescription"":""string"",""efficiencyScore"":number}},""capacityAnalysis"":{{""availableSpaces"":number,""accessRecommendation"":""allow|restrict|deny"",""recommendationDescription"":""string""}},{alertsSection}""operationalRecommendations"":{{""immediateActions"":[""string1""],""queueManagement"":[""string1""],""userCommunications"":[""string1""]}}}}
 
-INFO: {occupancyInfo} {capacityInfo}";
+        INFO: {occupancyInfo} {capacityInfo}";
 
         return prompt;
     }

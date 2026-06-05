@@ -9,7 +9,9 @@ internal class ParkingAnalysisTools : AnalysisToolBase
         : base(httpClient, aiService) { }
 
     [McpServerTool]
-    [Description("Llama al endpoint de API de sensores de aparcamiento usando el IdEspacio y una fecha concreta, y usa IA (Gemini) para interpretar los datos del espacio, indicando plazas ocupadas, disponibles y análisis de gestión.")]
+    [Description("Llama al endpoint de API de sensores de aparcamiento usando el IdEspacio y una fecha concreta, " +
+        "y usa IA (Gemini) para interpretar los datos del espacio, " +
+        "indicando plazas ocupadas, disponibles y análisis de gestión.")]
     public async Task<string> GetParkingAnalysisWithAI(
         [Description("ID del espacio de aparcamiento a consultar")] string idEspacio,
         [Description("Fecha de consulta en formato (dd-MM-yyyy). Si no se indica, se usa la fecha actual.")] string? fecha = null)

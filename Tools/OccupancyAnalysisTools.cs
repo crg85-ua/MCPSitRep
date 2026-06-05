@@ -9,7 +9,9 @@ internal class OccupancyAnalysisTools : AnalysisToolBase
         : base(httpClient, aiService) { }
 
     [McpServerTool]
-    [Description("Llama al endpoint de API de sensores de aforo usando el IdEspacio y usa IA (Gemini) para interpretar los datos de ocupación del espacio, devolviendo análisis con porcentaje de ocupación y recomendaciones operativas.")]
+    [Description("Llama al endpoint de API de sensores de aforo usando el IdEspacio " +
+        "y usa IA (Gemini) para interpretar los datos de ocupación del espacio, " +
+        "devolviendo análisis con porcentaje de ocupación y recomendaciones operativas.")]
     public async Task<string> GetOccupancyAnalysisWithAI(
         [Description("ID del espacio de aforo a consultar")] string idEspacio,
         [Description("Incluir alertas y recomendaciones operativas")] bool includeAlerts = true)
