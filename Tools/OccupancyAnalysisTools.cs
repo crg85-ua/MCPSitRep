@@ -11,11 +11,13 @@ internal class OccupancyAnalysisTools : AnalysisToolBase
     [McpServerTool]
     [Description("Llama al endpoint de API de sensores de aforo usando el IdEspacio " +
         "y usa IA (Gemini) para interpretar los datos de ocupación del espacio, " +
-        "devolviendo análisis con porcentaje de ocupación y recomendaciones operativas.")]
+        "devolviendo análisis con porcentaje de ocupación y recomendaciones operativas. " +
+        "Acepta tanto el identificador canónico (ej: PlayaArenal_1) como el nombre en lenguaje natural (ej: Playa del Arenal).")]
     public async Task<string> GetOccupancyAnalysisWithAI(
-        [Description("ID del espacio de aforo a consultar")] string idEspacio,
+        [Description("ID o nombre del espacio de aforo a consultar (ej: PlayaArenal_1, Playa del Arenal, PlayaGrava_2, PuertoJavea_3)")] string idEspacio,
         [Description("Incluir alertas y recomendaciones operativas")] bool includeAlerts = true)
     {
+        idEspacio = ResolveIdEspacio(idEspacio);
         try
         {
             var apiUrl = $"{BaseApiUrl}/GetSpaceOccupancyDataBySpace/{idEspacio}";

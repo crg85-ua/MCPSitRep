@@ -11,11 +11,13 @@ internal class ParkingAnalysisTools : AnalysisToolBase
     [McpServerTool]
     [Description("Llama al endpoint de API de sensores de aparcamiento usando el IdEspacio y una fecha concreta, " +
         "y usa IA (Gemini) para interpretar los datos del espacio, " +
-        "indicando plazas ocupadas, disponibles y análisis de gestión.")]
+        "indicando plazas ocupadas, disponibles y análisis de gestión. " +
+        "Acepta tanto el identificador canónico (ej: PlayaArenal_1) como el nombre en lenguaje natural (ej: Playa del Arenal).")]
     public async Task<string> GetParkingAnalysisWithAI(
-        [Description("ID del espacio de aparcamiento a consultar")] string idEspacio,
+        [Description("ID o nombre del espacio de aparcamiento a consultar (ej: PlayaArenal_1, Playa del Arenal, PlayaGrava_2, PuertoJavea_3)")] string idEspacio,
         [Description("Fecha de consulta en formato (dd-MM-yyyy). Si no se indica, se usa la fecha actual.")] string? fecha = null)
     {
+        idEspacio = ResolveIdEspacio(idEspacio);
         var fechaConsulta = DateTime.TryParse(fecha, out var parsedDate) ? parsedDate.Date : DateTime.UtcNow.Date;
 
         try
