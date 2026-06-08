@@ -12,7 +12,7 @@ internal class WeatherAnalysisTools : AnalysisToolBase
         "devolviendo un análisis estructurado en JSON. " +
         "Acepta tanto el identificador canónico (ej: PlayaArenal_1) como el nombre en lenguaje natural (ej: Playa del Arenal).")]
     public async Task<string> GetWeatherAnalysisWithAI(
-        [Description("ID o nombre del espacio meteorológico a consultar (ej: PlayaArenal_1, Playa del Arenal, PlayaGrava_2, PuertoJavea_3)")] string idEspacio,
+        [Description("ID o nombre del espacio meteorológico a consultar (ej: PlayaArenal_1, Playa del Arenal, CentroHistorico_2, PuertoJavea_3)")] string idEspacio,
         [Description("Incluir recomendaciones de seguridad")] bool includeSafetyRecommendations = true,
         [Description("Incluir análisis de tendencias")] bool includeTrendAnalysis = true)
     {
