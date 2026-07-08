@@ -87,7 +87,7 @@ namespace Parking
     }
 
     /// <summary>
-    /// Colecci�n de datos de m�ltiples sensores de aparcamiento
+    /// Colección de datos de múltiples sensores de aparcamiento
     /// </summary>
     public class ParkingSensorCollection
     {
@@ -98,49 +98,49 @@ namespace Parking
         public List<ParkingSensorData> ParkingSpots { get; set; } = new List<ParkingSensorData>();
 
         /// <summary>
-        /// Timestamp de la �ltima actualizaci�n
+        /// Timestamp de la última actualización
         /// </summary>
         [JsonPropertyName("lastUpdate")]
         public DateTime LastUpdate { get; set; }
     }
 
     /// <summary>
-    /// Resultado estructurado del an�lisis de IA de datos de aparcamiento
+    /// Resultado estructurado del análisis de IA de datos de aparcamiento
     /// </summary>
     public class ParkingAnalysisResult
     {
         /// <summary>
-        /// An�lisis de ocupaci�n general
+        /// Análisis de ocupación general
         /// </summary>
         [JsonPropertyName("occupancyAnalysis")]
         public ParkingOccupancyAnalysis? OccupancyAnalysis { get; set; }
     }
 
     /// <summary>
-    /// An�lisis de ocupaci�n de plazas de aparcamiento
+    /// Análisis de ocupación de plazas de aparcamiento
     /// </summary>
     public class ParkingOccupancyAnalysis
     {
         /// <summary>
-        /// N�mero total de plazas monitorizadas
+        /// Número total de plazas monitorizadas
         /// </summary>
         [JsonPropertyName("totalSpots")]
         public int? TotalSpots { get; set; }
 
         /// <summary>
-        /// N�mero de plazas ocupadas
+        /// Número de plazas ocupadas
         /// </summary>
         [JsonPropertyName("occupiedSpots")]
         public int? OccupiedSpots { get; set; }
 
         /// <summary>
-        /// N�mero de plazas disponibles
+        /// Número de plazas disponibles
         /// </summary>
         [JsonPropertyName("availableSpots")]
         public int? AvailableSpots { get; set; }
 
         /// <summary>
-        /// Porcentaje de ocupaci�n
+        /// Porcentaje de ocupación
         /// </summary>
         [JsonPropertyName("occupancyPercentage")]
         public double? OccupancyPercentage { get; set; }
@@ -152,7 +152,7 @@ namespace Parking
         public string? AvailabilityLevel { get; set; }
 
         /// <summary>
-        /// Descripci�n del estado general
+        /// Descripción del estado general
         /// </summary>
         [JsonPropertyName("statusDescription")]
         public string? StatusDescription { get; set; }
@@ -168,7 +168,7 @@ namespace Parking
 
     /// <summary>
     /// Ubicación geográfica según el estándar FIWARE
-    /// </summary
+    /// </summary>
     public class Location
     {
         public double[] Coordinates { get; set; } = new double[2]; // [longitud, latitud]

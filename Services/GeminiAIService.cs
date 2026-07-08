@@ -8,41 +8,41 @@ using Parking;
 using Weather;
 
 
-/// <summary>
-/// Servicio para realizar llamadas a modelos de IA como Llama
-/// </summary>
+    /// <summary>
+    /// Servicio para realizar llamadas a modelos de IA como Gemini
+    /// </summary>
 public interface IAIService
 {
     /// <summary>
-    /// Analiza datos meteorol�gicos utilizando el modelo de IA Llama y devuelve un an�lisis estructurado
+    /// Analiza datos meteorológicos utilizando el modelo de IA y devuelve un análisis estructurado
     /// </summary>
     /// <param name="temperatureData">Datos brutos del sensor en formato JSON string</param>
     /// <param name="parsedData">Datos del sensor parseados a objeto TemperatureSensorData (puede ser null)</param>
-    /// <param name="includeSafetyRecommendations">Indica si incluir recomendaciones de seguridad en el an�lisis</param>
-    /// <param name="includeTrendAnalysis">Indica si incluir an�lisis de tendencias en el resultado</param>
-    /// <returns>Objeto WeatherAnalysisResult con el an�lisis completo o null si hay error</returns>
+    /// <param name="includeSafetyRecommendations">Indica si incluir recomendaciones de seguridad en el análisis</param>
+    /// <param name="includeTrendAnalysis">Indica si incluir análisis de tendencias en el resultado</param>
+    /// <returns>Objeto WeatherAnalysisResult con el análisis completo o null si hay error</returns>
     Task<WeatherAnalysisResult?> AnalyzeTemperatureDataAsync(string temperatureData, TemperatureSensorData? parsedData, bool includeSafetyRecommendations, bool includeTrendAnalysis);
 
     /// <summary>
-    /// Analiza datos de aforo/ocupaci�n utilizando el modelo de IA Llama y devuelve un an�lisis estructurado
+    /// Analiza datos de aforo/ocupación utilizando el modelo de IA y devuelve un análisis estructurado
     /// </summary>
     /// <param name="occupancyData">Datos brutos del sensor de aforo en formato JSON string</param>
     /// <param name="parsedData">Datos del sensor parseados a objeto OccupancySensorData (puede ser null)</param>
     /// <param name="includeAlerts">Indica si incluir alertas y recomendaciones operativas</param>
-    /// <returns>Objeto OccupancyAnalysisResult con el an�lisis completo o null si hay error</returns>
+    /// <returns>Objeto OccupancyAnalysisResult con el análisis completo o null si hay error</returns>
     Task<OccupancyAnalysisResult?> AnalyzeOccupancyDataAsync(string occupancyData, OccupancySensorData? parsedData, bool includeAlerts);
 
     /// <summary>
-    /// Analiza datos de sensores de aparcamiento utilizando el modelo de IA Llama y devuelve un an�lisis estructurado
+    /// Analiza datos de sensores de aparcamiento utilizando el modelo de IA y devuelve un análisis estructurado
     /// </summary>
     /// <param name="parkingData">Datos brutos de sensores de aparcamiento en formato JSON string</param>
-    /// <param name="parsedData">Datos parseados de m�ltiples sensores (puede ser null)</param>
-    /// <returns>Objeto ParkingAnalysisResult con el an�lisis completo o null si hay error</returns>
+    /// <param name="parsedData">Datos parseados de múltiples sensores (puede ser null)</param>
+    /// <returns>Objeto ParkingAnalysisResult con el análisis completo o null si hay error</returns>
     Task<ParkingAnalysisResult?> AnalyzeParkingDataAsync(string parkingData, ParkingSensorCollection? parsedData);
 }
 
 /// <summary>
-/// Implementaci�n del servicio de IA que se conecta a Gemini
+/// Implementación del servicio de IA que se conecta a Gemini
 /// </summary>
 public class GeminiAIService : IAIService
 {
@@ -52,9 +52,9 @@ public class GeminiAIService : IAIService
 
 
     /// <summary>
-    /// Constructor que inicializa el cliente de Gemini con la configuraci�n proporcionada
+    /// Constructor que inicializa el cliente de Gemini con la configuración proporcionada
     /// </summary>
-    /// <param name="configuration">Configuraci�n de la aplicaci�n que contiene endpoint y modelo de IA</param>
+    /// <param name="configuration">Configuración de la aplicación que contiene endpoint y modelo de IA</param>
     /// <param name="logger">Logger para registrar errores y eventos del servicio</param>
     public GeminiAIService(IConfiguration configuration, ILogger<GeminiAIService> logger)
     {
@@ -66,26 +66,26 @@ public class GeminiAIService : IAIService
 
         _modelName = configuration.GetValue<string>("GeminiAI:ModelName") ?? "models/gemini-2.5-flash";
 
-        // 2. Inicializar el cliente unificado de Google GenAI
+        // 2. Inicializar cliente de Google GenAI
         _client = new Client(apiKey: apiKey);
     }
 
     /// <summary>
-    /// M�todo principal que analiza datos meteorol�gicos usando el modelo Llama
-    /// Maneja la comunicaci�n con Gemini, procesa la respuesta JSON y proporciona fallbacks en caso de error
+    /// Método principal que analiza datos meteorológicos usando el modelo Gemini
+    /// Maneja la comunicación con Gemini, procesa la respuesta JSON y proporciona fallbacks en caso de error
     /// </summary>
-    /// <param name="temperatureData">Datos brutos del sensor meteorol�gico en formato JSON</param>
+    /// <param name="temperatureData">Datos brutos del sensor meteorológico en formato JSON</param>
     /// <param name="parsedData">Objeto TemperatureSensorData parseado (opcional)</param>
     /// <param name="includeSafetyRecommendations">Flag para incluir recomendaciones de seguridad</param>
-    /// <param name="includeTrendAnalysis">Flag para incluir an�lisis de tendencias</param>
-    /// <returns>WeatherAnalysisResult con an�lisis completo o an�lisis b�sico en caso de error</returns>
+    /// <param name="includeTrendAnalysis">Flag para incluir analisis de tendencias</param>
+    /// <returns>WeatherAnalysisResult con analisis completo o analisis básico en caso de error</returns>
     public async Task<WeatherAnalysisResult?> AnalyzeTemperatureDataAsync(string temperatureData, TemperatureSensorData? parsedData, bool includeSafetyRecommendations, bool includeTrendAnalysis)
     {
         try
         {
             var prompt = CreateWeatherAnalysisPrompt(temperatureData, parsedData, includeSafetyRecommendations, includeTrendAnalysis);
 
-            // 3. La llamada se hace vía client.Models.GenerateContentAsync
+            // 3. La llamada se hace vía _client.Models.GenerateContentAsync
             // Usamos GenerationConfig para forzar JSON
             var response = await _client.Models.GenerateContentAsync(_modelName, prompt, new()
             {
@@ -103,25 +103,22 @@ public class GeminiAIService : IAIService
         }
         catch (HttpRequestException ex)
         {
-            // Error de conexi�n con Gemini - devolver an�lisis b�sico como fallback
             return CreateWeatherFallbackAnalysis(parsedData, $"Error de conexion con Gemini: {ex.Message}");
         }
         catch (Exception ex)
         {
-            // Error general - devolver an�lisis b�sico como fallback
             return CreateWeatherFallbackAnalysis(parsedData, $"Error al conectar con el modelo de Gemini: {ex.Message} {ex.StackTrace}");
         }
     }
 
     /// <summary>
-    /// Analiza datos de aforo/ocupaci�n usando el modelo Llama
-    /// Maneja la comunicaci�n con Ollama, procesa la respuesta JSON y proporciona fallbacks en caso de error
+    /// Analiza datos de aforo/ocupación usando el modelo Gemini
+    /// Maneja la comunicación con Gemini, procesa la respuesta JSON y proporciona fallbacks en caso de error
     /// </summary>
     /// <param name="occupancyData">Datos brutos del sensor de aforo en formato JSON</param>
     /// <param name="parsedData">Objeto OccupancySensorData parseado (opcional)</param>
-    /// <param name="includeFlowAnalysis">Flag para incluir an�lisis de flujo de personas</param>
     /// <param name="includeAlerts">Flag para incluir alertas y recomendaciones operativas</param>
-    /// <returns>OccupancyAnalysisResult con an�lisis completo o an�lisis b�sico en caso de error</returns>
+    /// <returns>OccupancyAnalysisResult con analisis completo o analisis basico en caso de error</returns>
     public async Task<OccupancyAnalysisResult?> AnalyzeOccupancyDataAsync(string occupancyData, OccupancySensorData? parsedData, bool includeAlerts)
     {
         try
@@ -144,23 +141,21 @@ public class GeminiAIService : IAIService
         }
         catch (HttpRequestException ex)
         {
-            // Error de conexi�n con Gemini - devolver an�lisis b�sico como fallback
             return CreateFallbackOccupancyAnalysis(parsedData, $"Error de conexion con Gemini: {ex.Message}");
         }
         catch (Exception ex)
         {
-            // Error general - devolver an�lisis b�sico como fallback
             return CreateFallbackOccupancyAnalysis(parsedData, $"Error al conectar con el modelo de Gemini: {ex.Message} {ex.StackTrace}");
         }
     }
 
     /// <summary>
-    /// Analiza datos de sensores de aparcamiento usando el modelo Llama
-    /// Procesa m�ltiples sensores y proporciona an�lisis integral de disponibilidad y gesti�n
+    /// Analiza datos de sensores de aparcamiento usando el modelo Gemini
+    /// Procesa múltiples sensores y proporciona análisis integral de disponibilidad y gestión
     /// </summary>
     /// <param name="parkingData">Datos brutos de sensores de aparcamiento en formato JSON</param>
-    /// <param name="parsedData">Colecci�n de datos de sensores parseados (opcional)</param>
-    /// <returns>ParkingAnalysisResult con an�lisis completo o an�lisis b�sico en caso de error</returns>
+    /// <param name="parsedData">Colección de datos de sensores parseados (opcional)</param>
+    /// <returns>ParkingAnalysisResult con análisis completo o análisis básico en caso de error</returns>
     public async Task<ParkingAnalysisResult?> AnalyzeParkingDataAsync(string parkingData, ParkingSensorCollection? parsedData)
     {
         try
@@ -317,7 +312,7 @@ public class GeminiAIService : IAIService
                 MaxCapacity = parsedData.MaxCapacity,
                 OccupancyPercentage = parsedData.OccupancyPercentage,
                 OccupancyLevel = parsedData.OccupancyLevel.ToLowerInvariant(),
-                StatusDescription = "An�lisis b�sico - IA no disponible",
+                StatusDescription = "Análisis básico - IA no disponible",
                 EfficiencyScore = GetBasicOccupancyScore(parsedData.OccupancyPercentage)
             };
 
@@ -327,7 +322,7 @@ public class GeminiAIService : IAIService
                 {
                     AvailableSpaces = Math.Max(0, parsedData.MaxCapacity.Value - parsedData.CurrentOccupancy.Value),
                     AccessRecommendation = GetBasicAccessRecommendation(parsedData.OccupancyPercentage),
-                    RecommendationDescription = $"An�lisis b�sico - {errorMessage}"
+                    RecommendationDescription = $"Análisis básico - {errorMessage}"
                 };
             }
         }
@@ -341,7 +336,7 @@ public class GeminiAIService : IAIService
         {
             OccupancyAnalysis = new ParkingOccupancyAnalysis
             {
-                StatusDescription = $"An�lisis b�sico - IA no disponible: {errorMessage}"
+                StatusDescription = $"Análisis básico - IA no disponible: {errorMessage}"
             }
         };
 
@@ -359,7 +354,7 @@ public class GeminiAIService : IAIService
                 AvailableSpots = availableSpots,
                 OccupancyPercentage = occupancyPercentage,
                 AvailabilityLevel = GetBasicAvailabilityLevel(occupancyPercentage),
-                StatusDescription = $"An�lisis b�sico - IA no disponible: {errorMessage}"
+                StatusDescription = $"Análisis básico - IA no disponible: {errorMessage}"
             };
         }
 
@@ -456,11 +451,11 @@ public class GeminiAIService : IAIService
         ""monitoringRecommendations"": [""string1"", ""string2""]
       }," : "";
 
-        var temperatureInfo = parsedData?.Temperature.HasValue == true ? $"- Temperatura: {parsedData.Temperature:F1}�C" : "";
+        var temperatureInfo = parsedData?.Temperature.HasValue == true ? $"- Temperatura: {parsedData.Temperature:F1}°C" : "";
         var humidityInfo = parsedData?.Humidity.HasValue == true ? $"- Humedad: {parsedData.Humidity:F1}%" : "";
         var windInfo = parsedData?.WindSpeed.HasValue == true ? $"- Velocidad del viento: {parsedData.WindSpeed:F1} m/s" : "";
         var weatherInfo = parsedData?.WeatherType != null ? $"- Tipo de clima: {parsedData.WeatherType}" : "";
-        var precipitationInfo = parsedData?.Precipitation.HasValue == true ? $"- Precipitaci�n: {parsedData.Precipitation:F1} mm" : "";
+        var precipitationInfo = parsedData?.Precipitation.HasValue == true ? $"- Precipitación: {parsedData.Precipitation:F1} mm" : "";
         var locationInfo = parsedData?.Location?.Coordinates != null && parsedData.Location.Coordinates.Length >= 2
             ? $"- Coordenadas: {parsedData.Location.Coordinates[1]:F4}, {parsedData.Location.Coordinates[0]:F4}" : "";
 
@@ -503,7 +498,7 @@ public class GeminiAIService : IAIService
     {
         var alertsSection = includeAlerts ? @"""alerts"":{""alertLevel"":""none|low|medium|high|critical"",""activeAlerts"":[""string1""],""warnings"":[""string1""],""timeToNextAlert"":""string""}," : "";
 
-        var occupancyInfo = parsedData?.CurrentOccupancy.HasValue == true ? $"Ocupaci�n:{parsedData.CurrentOccupancy}" : "";
+        var occupancyInfo = parsedData?.CurrentOccupancy.HasValue == true ? $"Ocupación:{parsedData.CurrentOccupancy}" : "";
         var capacityInfo = parsedData?.MaxCapacity.HasValue == true ? $"Capacidad:{parsedData.MaxCapacity}" : "";
 
         var prompt = $@"Analiza datos de aforo y responde SOLO JSON:

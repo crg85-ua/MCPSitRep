@@ -139,7 +139,7 @@ namespace Occupancy
     }
 
     /// <summary>
-    /// Resultado estructurado del an�lisis de IA de datos de aforo/ocupaci�n
+    /// Resultado estructurado del análisis de IA de datos de aforo/ocupación
     /// </summary>
     public class OccupancyAnalysisResult
     {
@@ -169,36 +169,36 @@ namespace Occupancy
     }
 
     /// <summary>
-    /// Analisis especifico del nivel de ocupacion
+    /// Análisis específico del nivel de ocupación
     /// </summary>
     public class OccupancyAnalysis
     {
         /// <summary>
-        /// Numero actual de ocupantes
+        /// Número actual de ocupantes
         /// </summary>
         [JsonPropertyName("currentOccupancy")]
         public int? CurrentOccupancy { get; set; }
 
         /// <summary>
-        /// Capacidad maxima
+        /// Capacidad máxima
         /// </summary>
         [JsonPropertyName("maxCapacity")]
         public int? MaxCapacity { get; set; }
 
         /// <summary>
-        /// Porcentaje de ocupacion actual
+        /// Porcentaje de ocupación actual
         /// </summary>
         [JsonPropertyName("occupancyPercentage")]
         public double? OccupancyPercentage { get; set; }
 
         /// <summary>
-        /// Nivel de ocupacion (low, moderate, high, critical, full)
+        /// Nivel de ocupación (low, moderate, high, critical, full)
         /// </summary>
         [JsonPropertyName("occupancyLevel")]
         public string? OccupancyLevel { get; set; }
 
         /// <summary>
-        /// Descripcion del estado de ocupacion
+        /// Descripción del estado de ocupación
         /// </summary>
         [JsonPropertyName("statusDescription")]
         public string? StatusDescription { get; set; }

@@ -3,24 +3,24 @@ namespace Weather
 {
     
     /// <summary>
-    /// Resultado estructurado del an�lisis de IA de datos meteorol�gicos
+    /// Resultado estructurado del análisis de IA de datos meteorológicos
     /// </summary>
     public class WeatherAnalysisResult
     {
         /// <summary>
-        /// An�lisis de la temperatura
+        /// Análisis de la temperatura
         /// </summary>
         [JsonPropertyName("temperatureAnalysis")]
         public TemperatureAnalysis? TemperatureAnalysis { get; set; }
 
         /// <summary>
-        /// An�lisis de la humedad
+        /// Análisis de la humedad
         /// </summary>
         [JsonPropertyName("humidityAnalysis")]
         public HumidityAnalysis? HumidityAnalysis { get; set; }
 
         /// <summary>
-        /// An�lisis de las condiciones meteorol�gicas generales
+        /// Análisis de las condiciones meteorológicas generales
         /// </summary>
         [JsonPropertyName("weatherConditions")]
         public WeatherConditionsAnalysis? WeatherConditions { get; set; }
@@ -32,7 +32,7 @@ namespace Weather
         public SafetyRecommendations? SafetyRecommendations { get; set; }
 
         /// <summary>
-        /// An�lisis de tendencias
+        /// Análisis de tendencias
         /// </summary>
         [JsonPropertyName("trendAnalysis")]
         public TrendAnalysis? TrendAnalysis { get; set; }
@@ -45,7 +45,7 @@ namespace Weather
     }
 
     /// <summary>
-    /// An�lisis espec�fico de temperatura
+    /// Análisis específico de temperatura
     /// </summary>
     public class TemperatureAnalysis
     {
@@ -68,20 +68,20 @@ namespace Weather
         public string? ComfortLevel { get; set; }
 
         /// <summary>
-        /// Descripci�n del estado de confort
+        /// Descripción del estado de confort
         /// </summary>
         [JsonPropertyName("comfortDescription")]
         public string? ComfortDescription { get; set; }
 
         /// <summary>
-        /// Puntuaci�n de confort del 1-10
+        /// Puntuación de confort del 1-10
         /// </summary>
         [JsonPropertyName("comfortScore")]
         public double? ComfortScore { get; set; }
     }
 
     /// <summary>
-    /// An�lisis espec�fico de humedad
+    /// Análisis específico de humedad
     /// </summary>
     public class HumidityAnalysis
     {
@@ -104,20 +104,20 @@ namespace Weather
         public string? HumidityStatus { get; set; }
 
         /// <summary>
-        /// Descripci�n del estado de humedad
+        /// Descripción del estado de humedad
         /// </summary>
         [JsonPropertyName("humidityDescription")]
         public string? HumidityDescription { get; set; }
 
         /// <summary>
-        /// Puntuaci�n de humedad del 1-10
+        /// Puntuación de humedad del 1-10
         /// </summary>
         [JsonPropertyName("humidityScore")]
         public double? HumidityScore { get; set; }
     }
 
     /// <summary>
-    /// An�lisis de condiciones meteorol�gicas generales
+    /// Análisis de condiciones meteorológicas generales
     /// </summary>
     public class WeatherConditionsAnalysis
     {
@@ -128,7 +128,7 @@ namespace Weather
         public double? WindSpeed { get; set; }
 
         /// <summary>
-        /// Categor�a del viento (calm, light, moderate, strong)
+        /// Categoría del viento (calm, light, moderate, strong)
         /// </summary>
         [JsonPropertyName("windCategory")]
         public string? WindCategory { get; set; }
@@ -140,7 +140,7 @@ namespace Weather
         public string? WeatherType { get; set; }
 
         /// <summary>
-        /// Precipitaci�n en mm
+        /// Precipitacion en mm
         /// </summary>
         [JsonPropertyName("precipitation")]
         public double? Precipitation { get; set; }
@@ -152,13 +152,13 @@ namespace Weather
         public string? OverallWeatherStatus { get; set; }
 
         /// <summary>
-        /// Descripci�n general del clima
+        /// Descripción general del clima
         /// </summary>
         [JsonPropertyName("weatherDescription")]
         public string? WeatherDescription { get; set; }
 
         /// <summary>
-        /// Puntuaci�n general del clima del 1-10
+        /// Puntuación general del clima del 1-10
         /// </summary>
         [JsonPropertyName("weatherScore")]
         public double? WeatherScore { get; set; }
@@ -176,7 +176,7 @@ namespace Weather
         public string? RiskLevel { get; set; }
 
         /// <summary>
-        /// Alertas espec�ficas
+        /// Alertas especificas
         /// </summary>
         [JsonPropertyName("alerts")]
         public string[]? Alerts { get; set; }
@@ -195,7 +195,7 @@ namespace Weather
     }
 
     /// <summary>
-    /// An�lisis de tendencias
+    /// Analisis de tendencias
     /// </summary>
     public class TrendAnalysis
     {
@@ -206,7 +206,7 @@ namespace Weather
         public string? TemperatureTrend { get; set; }
 
         /// <summary>
-        /// Pron�stico a corto plazo
+        /// Pronstico a corto plazo
         /// </summary>
         [JsonPropertyName("shortTermForecast")]
         public string? ShortTermForecast { get; set; }
@@ -254,7 +254,7 @@ namespace Weather
         public string[]? RecommendedClothing { get; set; }
 
         /// <summary>
-        /// Nivel de adecuaci�n para actividades al aire libre (1-10)
+        /// Nivel de adecuacion para actividades al aire libre (1-10)
         /// </summary>
         [JsonPropertyName("outdoorSuitabilityScore")]
         public double? OutdoorSuitabilityScore { get; set; }

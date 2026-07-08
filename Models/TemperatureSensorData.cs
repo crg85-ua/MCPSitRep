@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 
 /// <summary>
-/// Modelo de datos para pron�stico meteorol�gico seg�n est�ndar FIWARE dataModel.Weather WeatherForecast
+/// Modelo de datos para pronóstico meteorológico según estándar FIWARE dataModel.Weather WeatherForecast
 /// </summary>
 public class TemperatureSensorData
 {
@@ -182,20 +182,20 @@ public class TemperatureSensorData
     public double? Humidity => RelativeHumidity;
 
     /// <summary>
-    /// Timestamp para compatibilidad con c�digo existente
+    /// Timestamp para compatibilidad con codigo existente
     /// </summary>
     [JsonIgnore]
     public DateTime Timestamp => DateRetrieved ?? DateTime.UtcNow;
 
     /// <summary>
-    /// Unidad de temperatura (siempre Celsius seg�n FIWARE)
+    /// Unidad de temperatura (siempre Celsius segun FIWARE)
     /// </summary>
     [JsonIgnore]
     public string Unit => "Celsius";
 
 
     /// <summary>
-    /// Fecha y hora para compatibilidad con c�digo existente
+    /// Fecha y hora para compatibilidad con codigo existente
     /// </summary>
     [JsonIgnore]
     public DateTime DateTime => ValidFrom ?? DateRetrieved ?? DateTime.UtcNow;
